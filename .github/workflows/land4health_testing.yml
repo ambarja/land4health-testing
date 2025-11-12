@@ -70,19 +70,10 @@ jobs:
           print("Key written to:", key_path)
           PY
 
-      # Windows – PowerShell nativo (sin heredoc)
-      - name: Write EE key (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          $b64 = $env:GEE_SA_KEY_B64
-          if (-not $b64) { throw "GEE_SA_KEY_B64 vacío" }
-          $keyPath = Join-Path $env:RUNNER_TEMP "ee-key.json"
-          [IO.File]::WriteAllBytes($keyPath, [Convert]::FromBase64String($b64))
-          "GOOGLE_APPLICATION_CREDENTIALS=$keyPath" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
-          "GEE_PROJECT_ID=$($env:GEE_PROJECT_ID)"   | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
-          Write-Host "Key written to: $keyPath"
-
+      # Crear/usar entorno Python con l4h_* y ejecutar tu script en una MISMA sesión R
+      - name: land4health install
+        run: Rscript -e 'library(land4health); l4h_install();l4h_use_python()'
+        
       # --- Set RETICULATE_PYTHON por SO ---
       - name: Point reticulate to r-land4health venv (macOS)
         if: runner.os == 'macOS'
@@ -100,18 +91,9 @@ jobs:
         run: |
           Add-Content -Path $env:GITHUB_ENV -Value "RETICULATE_PYTHON=$($env:USERPROFILE)\.virtualenvs\r-land4health\Scripts\python.exe"
 
-      # Crear/usar entorno Python con l4h_* y ejecutar tu script en una MISMA sesión R
-      - name: land4health install + run main.R
-        run: |
-          Rscript - <<'R'
-          library(land4health)
-          # Crea (o reutiliza) el entorno Python con earthengine-api
-          l4h_install()
-          # Selecciona ese entorno para reticulate/rgee
-          l4h_use_python()
-          # Ejecuta tu pipeline (usa GOOGLE_APPLICATION_CREDENTIALS y GEE_PROJECT_ID)
-          source("main.R")
-          R
-
+          
+      - name: Run processing script
+        run: Rscript main.R
+    
       - name: Successful
-        run: echo "✅ Workflow successful on ${{ matrix.os }}"
+        run: echo "✅ Workflow successful"
