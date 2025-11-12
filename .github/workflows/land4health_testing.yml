@@ -9,7 +9,11 @@ on:
 
 jobs:
   build-and-deploy:
-    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
 
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
@@ -26,35 +30,48 @@ jobs:
           r-version: '4.4.2'
           use-public-rspm: true
 
-      # Si usas sf/terra en macOS, descomenta:
-      # - name: System deps (macOS)
-      #   run: |
-      #     brew update
-      #     brew install gdal proj geos udunits
+      - name: Setup pandoc
+        uses: r-lib/actions/setup-pandoc@v2
+
+      # Dependencias del sistema SOLO en Linux (útil si sf/terra están en tus deps)
+      - name: System deps (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libgdal-dev libgeos-dev libproj-dev libudunits2-dev \
+            libcurl4-openssl-dev libssl-dev libfontconfig1-dev \
+            libxml2-dev
 
       - name: Install R packages with pak
         run: |
           Rscript -e 'install.packages("pak", repos="https://cloud.r-project.org")'
-          Rscript -e 'pak::pak(c("harmonize-tools/land4health", "ambarja/geoidep"))'
-  
-      - name: Write EE Service Account JSON
-        env:
-          GEE_SA_KEY_B64: ${{ secrets.GEE_SA_KEY_B64 }}
-          GEE_PROJECT_ID: ${{ secrets.GEE_PROJECT_ID }}
+          Rscript -e 'pak::pak(c("harmonize-tools/land4health", "ambarja/geoidep", "rgee"))'
+
+      # Escribir el JSON desde base64 (portable en los 3 SO) y exportar envs
+      - name: Write EE Service Account JSON + export env
         run: |
-          echo "$GEE_SA_KEY_B64" | base64 -d > "$RUNNER_TEMP/ee-key.json"
-          echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/ee-key.json" >> "$GITHUB_ENV"
-          echo "GEE_PROJECT_ID=$GEE_PROJECT_ID" >> "$GITHUB_ENV"
-  
-      - name: land4health install
-        run: Rscript -e 'library(land4health); l4h_install();l4h_use_python()'
-  
-      - name: Point reticulate to r-land4health venv
-        run: |
-          echo "RETICULATE_PYTHON=$HOME/.virtualenvs/r-land4health/bin/python" >> "$GITHUB_ENV"
-      # Todo en una sola sesión R: crear/usar el entorno con l4h_* y ejecutar tu script
+          python - <<PY
+          import os, base64, sys
+          b64 = os.environ.get("GEE_SA_KEY_B64", "")
+          if not b64:
+              sys.exit("GEE_SA_KEY_B64 vacío")
+          key_path = os.path.join(os.environ["RUNNER_TEMP"], "ee-key.json")
+          with open(key_path, "wb") as f:
+              f.write(base64.b64decode(b64))
+          with open(os.environ["GITHUB_ENV"], "a") as f:
+              f.write(f"GOOGLE_APPLICATION_CREDENTIALS={key_path}\n")
+              f.write(f"GEE_PROJECT_ID={os.environ.get('GEE_PROJECT_ID','')}\n")
+          print("Key written to:", key_path)
+          PY
+
+      # Todo en UNA sesión R: crea/usa el entorno Python con l4h_* y ejecuta main.R
+
       - name: Run processing script
         run: Rscript main.R
-    
+      
       - name: Successful
         run: echo "✅ Workflow successful"
+
+      - name: Successful
+        run: echo "✅ Workflow successful on ${{ matrix.os }}"
