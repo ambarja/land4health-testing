@@ -56,11 +56,6 @@ jobs:
       - name: Create env with l4h_install + run main.R
         run: |
           Rscript - <<'R'
-          library(land4health)
-          # Crea (o reutiliza) el entorno Python con earthengine-api
-          l4h_install()
-          # Selecciona ese entorno para reticulate/rgee
-          l4h_use_python()
           # Ejecuta tu pipeline
           source("main.R")
           R
