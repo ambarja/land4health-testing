@@ -90,22 +90,22 @@ jobs:
         
       # --- Set RETICULATE_PYTHON por SO ---
       - name: Point reticulate to r-land4health venv (macOS)
-        if: runner.os == 'macOS'
+        if: runner.os != 'Windows'
         run: |
-          echo "RETICULATE_PYTHON=$HOME/.virtualenvs/r-land4health/bin/python" >> "$GITHUB_ENV"
-      
-      - name: Point reticulate to r-land4health venv (Linux)
-        if: runner.os == 'Linux'
-        run: |
-          echo "RETICULATE_PYTHON=$HOME/.virtualenvs/r-land4health/bin/python" >> "$GITHUB_ENV"
+           echo "RETICULATE_PYTHON=$HOME/.virtualenvs/r-land4health/bin/python" >> "$GITHUB_ENV"
       
       - name: Point reticulate to r-land4health venv (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          Add-Content -Path $env:GITHUB_ENV -Value "RETICULATE_PYTHON=$($env:USERPROFILE)\.virtualenvs\r-land4health\Scripts\python.exe"
-
-          
+          # Evita problemas con '\r' en el string usando Join-Path:
+          $venvRoot = Join-Path $env:USERPROFILE ".virtualenvs"
+          $venvDir  = Join-Path $venvRoot "r-land4health"
+          $scripts  = Join-Path $venvDir "Scripts"
+          $py       = Join-Path $scripts "python.exe"
+          Add-Content -Path $env:GITHUB_ENV -Value "RETICULATE_PYTHON=$py"
+          Write-Host "RETICULATE_PYTHON -> $py"
+      
       - name: Run processing script
         run: Rscript main.R
     
