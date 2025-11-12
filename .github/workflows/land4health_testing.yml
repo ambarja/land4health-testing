@@ -70,6 +70,23 @@ jobs:
           print("Key written to:", key_path)
           PY
 
+      # --- Set RETICULATE_PYTHON por SO ---
+      - name: Point reticulate to r-land4health venv (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          echo "RETICULATE_PYTHON=$HOME/.virtualenvs/r-land4health/bin/python" >> "$GITHUB_ENV"
+      
+      - name: Point reticulate to r-land4health venv (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          echo "RETICULATE_PYTHON=$HOME/.virtualenvs/r-land4health/bin/python" >> "$GITHUB_ENV"
+      
+      - name: Point reticulate to r-land4health venv (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Add-Content -Path $env:GITHUB_ENV -Value "RETICULATE_PYTHON=$($env:USERPROFILE)\.virtualenvs\r-land4health\Scripts\python.exe"
+
       # Crear/usar entorno Python con l4h_* y ejecutar tu script en una MISMA sesión R
       - name: land4health install + run main.R
         run: |
