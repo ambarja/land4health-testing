@@ -1,0 +1,70 @@
+name: land4health - testing 𖥂🎮
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  schedule:
+    - cron: '0 12 * * *'  # 07:00 Perú
+
+jobs:
+  build-and-deploy:
+    runs-on: macos-latest
+
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+      GEE_SA_KEY_B64: ${{ secrets.GEE_SA_KEY_B64 }}
+      GEE_PROJECT_ID: ${{ secrets.GEE_PROJECT_ID }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup R
+        uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: '4.4.2'
+          use-public-rspm: true
+
+      # Si usas sf/terra en macOS, descomenta:
+      # - name: System deps (macOS)
+      #   run: |
+      #     brew update
+      #     brew install gdal proj geos udunits
+
+      - name: Install R packages with pak
+        run: |
+          Rscript -e 'install.packages("pak", repos="https://cloud.r-project.org")'
+          Rscript -e 'pak::pak(c("harmonize-tools/land4health", "harmonize-tools/geoidep", "rgee"))'
+
+      - name: Write EE Service Account JSON (portable)
+        shell: bash
+        run: |
+          python - <<'PY'
+          import os, base64, sys
+          b64 = os.environ.get("GEE_SA_KEY_B64", "")
+          if not b64:
+            sys.exit("GEE_SA_KEY_B64 vacío")
+          path = os.path.join(os.environ["RUNNER_TEMP"], "ee-key.json")
+          with open(path, "wb") as f:
+            f.write(base64.b64decode(b64))
+          print(f"Wrote", path)
+          PY
+          echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/ee-key.json" >> "$GITHUB_ENV"
+          echo "GEE_PROJECT_ID=${GEE_PROJECT_ID}" >> "$GITHUB_ENV"
+
+      # Todo en una sola sesión R: crear/usar el entorno con l4h_* y ejecutar tu script
+      - name: Create env with l4h_install + run main.R
+        run: |
+          Rscript - <<'R'
+          library(land4health)
+          # Crea (o reutiliza) el entorno Python con earthengine-api
+          l4h_install()
+          # Selecciona ese entorno para reticulate/rgee
+          l4h_use_python()
+          # Ejecuta tu pipeline
+          source("main.R")
+          R
+
+      - name: Successful
+        run: echo "✅ Workflow successful"
