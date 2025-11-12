@@ -54,7 +54,21 @@ jobs:
           Rscript -e 'pak::pak(c("harmonize-tools/land4health","ambarja/geoidep"))'
 
       # Escribir ee-key.json de forma portable (igual en Linux/macOS/Windows)
+      # Windows — usa PowerShell (sin heredoc)
+      - name: Write EE key (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $b64 = $env:GEE_SA_KEY_B64
+          if (-not $b64) { throw "GEE_SA_KEY_B64 vacío" }
+          $keyPath = Join-Path $env:RUNNER_TEMP "ee-key.json"
+          [IO.File]::WriteAllBytes($keyPath, [Convert]::FromBase64String($b64))
+          "GOOGLE_APPLICATION_CREDENTIALS=$keyPath" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "GEE_PROJECT_ID=$($env:GEE_PROJECT_ID)"   | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          Write-Host "Key written to: $keyPath"
+      
       - name: Write EE Service Account JSON + export env
+        if: runner.os != 'Windows'
         run: |
           python - <<'PY'
           import os, base64, sys
