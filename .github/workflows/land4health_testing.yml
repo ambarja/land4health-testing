@@ -43,18 +43,19 @@ jobs:
             libcurl4-openssl-dev libssl-dev libfontconfig1-dev \
             libxml2-dev
 
-      - name: Setup Python (for base64 & ensure availability on Windows)
+      - name: Setup Python (for tools & Windows availability)
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
+      # Instalar rgee fijado y luego tus paquetes (evita conflictos de versión)
       - name: Install R packages with pak
         run: |
-          Rscript -e 'install.packages("pak", repos="https://cloud.r-project.org")'
-          Rscript -e 'pak::pak(c("harmonize-tools/land4health","ambarja/geoidep"))'
+          Rscript -e 'install.packages("pak", repos = "https://cloud.r-project.org")'
+          Rscript -e 'pak::pkg_install("cran::rgee@=1.1.7", upgrade = FALSE)'
+          Rscript -e 'pak::pkg_install(c("github::harmonize-tools/land4health", "github::ambarja/geoidep"), upgrade = FALSE)'
 
-      # Escribir ee-key.json de forma portable (igual en Linux/macOS/Windows)
-      # Windows — usa PowerShell (sin heredoc)
+      # Escribir ee-key.json (Windows con PowerShell)
       - name: Write EE key (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
@@ -66,9 +67,11 @@ jobs:
           "GOOGLE_APPLICATION_CREDENTIALS=$keyPath" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
           "GEE_PROJECT_ID=$($env:GEE_PROJECT_ID)"   | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
           Write-Host "Key written to: $keyPath"
-      
-      - name: Write EE Service Account JSON + export env
+
+      # Escribir ee-key.json (Linux/macOS con Bash + Python heredoc)
+      - name: Write EE key (Unix)
         if: runner.os != 'Windows'
+        shell: bash
         run: |
           python - <<'PY'
           import os, base64, sys
@@ -84,30 +87,21 @@ jobs:
           print("Key written to:", key_path)
           PY
 
-      # Crear/usar entorno Python con l4h_* y ejecutar tu script en una MISMA sesión R
-      - name: land4health install
-        run: Rscript -e 'library(land4health); l4h_install();l4h_use_python()'
-        
-      # --- Set RETICULATE_PYTHON por SO ---
-      - name: Point reticulate to r-land4health venv (macOS)
-        if: runner.os != 'Windows'
+      # Crear/usar entorno Python y exportar RETICULATE_PYTHON automáticamente (SO-agnóstico)
+      - name: land4health install + export RETICULATE_PYTHON
         run: |
-           echo "RETICULATE_PYTHON=$HOME/.virtualenvs/r-land4health/bin/python" >> "$GITHUB_ENV"
-      
-      - name: Point reticulate to r-land4health venv (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          # Evita problemas con '\r' en el string usando Join-Path:
-          $venvRoot = Join-Path $env:USERPROFILE ".virtualenvs"
-          $venvDir  = Join-Path $venvRoot "r-land4health"
-          $scripts  = Join-Path $venvDir "Scripts"
-          $py       = Join-Path $scripts "python.exe"
-          Add-Content -Path $env:GITHUB_ENV -Value "RETICULATE_PYTHON=$py"
-          Write-Host "RETICULATE_PYTHON -> $py"
-      
+          Rscript - <<'R'
+          library(land4health)
+          l4h_install()      # crea/reusa el venv con earthengine-api
+          l4h_use_python()   # selecciona ese venv para reticulate/rgee
+          py <- reticulate::py_executable()
+          cat(sprintf("RETICULATE_PYTHON=%s\n", py),
+              file = Sys.getenv("GITHUB_ENV"), append = TRUE)
+          message("RETICULATE_PYTHON = ", py)
+          R
+
       - name: Run processing script
         run: Rscript main.R
-    
+
       - name: Successful
-        run: echo "✅ Workflow successful"
+        run: echo "✅ Workflow successful on ${{ matrix.os }}"
