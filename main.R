@@ -11,9 +11,7 @@ py_run_string(paste(
   "ee.Initialize(cred, project=os.getenv('GEE_PROJECT_ID'))",
   sep="\n"
 ))
-rgee::ee_Initialize()
-
-
+library(rgee)
 # Downloading the adminstration limits of Loreto provinces
 provinces_loreto <- get_provinces(show_progress = FALSE) |>
   subset(nombdep == "LORETO")
