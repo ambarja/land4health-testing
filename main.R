@@ -2,7 +2,7 @@ library(land4health)
 library(sf)
 library(reticulate)
 library(geoidep)
-use_python(Sys.getenv("RETICULATE_PYTHON"), required=TRUE)
+
 info <- jsonlite::fromJSON(Sys.getenv("GOOGLE_APPLICATION_CREDENTIALS"))
 sa   <- info$client_email
 py_run_string(paste(
