@@ -9,7 +9,11 @@ on:
 
 jobs:
   build-and-deploy:
-    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
 
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
@@ -30,8 +34,23 @@ jobs:
         run: |
           Rscript -e 'install.packages("pak", repos="https://cloud.r-project.org")'
           Rscript -e 'pak::pak(c("harmonize-tools/land4health", "ambarja/geoidep"))'
-  
-      - name: Write EE Service Account JSON
+
+      # --- Write EE Service Account JSON por SO ---
+
+      # macOS (BSD base64 usa -D)
+      - name: Write EE Service Account JSON (macOS)
+        if: runner.os == 'macOS'
+        env:
+          GEE_SA_KEY_B64: ${{ secrets.GEE_SA_KEY_B64 }}
+          GEE_PROJECT_ID: ${{ secrets.GEE_PROJECT_ID }}
+        run: |
+          echo "$GEE_SA_KEY_B64" | base64 -D > "$RUNNER_TEMP/ee-key.json"
+          echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/ee-key.json" >> "$GITHUB_ENV"
+          echo "GEE_PROJECT_ID=$GEE_PROJECT_ID" >> "$GITHUB_ENV"
+
+      # Linux (GNU base64 usa -d)
+      - name: Write EE Service Account JSON (Linux)
+        if: runner.os == 'Linux'
         env:
           GEE_SA_KEY_B64: ${{ secrets.GEE_SA_KEY_B64 }}
           GEE_PROJECT_ID: ${{ secrets.GEE_PROJECT_ID }}
@@ -39,16 +58,47 @@ jobs:
           echo "$GEE_SA_KEY_B64" | base64 -d > "$RUNNER_TEMP/ee-key.json"
           echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/ee-key.json" >> "$GITHUB_ENV"
           echo "GEE_PROJECT_ID=$GEE_PROJECT_ID" >> "$GITHUB_ENV"
-  
+
+      # Windows (PowerShell)
+      - name: Write EE Service Account JSON (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          GEE_SA_KEY_B64: ${{ secrets.GEE_SA_KEY_B64 }}
+          GEE_PROJECT_ID: ${{ secrets.GEE_PROJECT_ID }}
+        run: |
+          $b64 = $env:GEE_SA_KEY_B64
+          if (-not $b64) { throw "GEE_SA_KEY_B64 vacío" }
+          $keyPath = Join-Path $env:RUNNER_TEMP "ee-key.json"
+          [IO.File]::WriteAllBytes($keyPath, [Convert]::FromBase64String($b64))
+          "GOOGLE_APPLICATION_CREDENTIALS=$keyPath" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "GEE_PROJECT_ID=$($env:GEE_PROJECT_ID)"   | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
       - name: land4health install
-        run: Rscript -e 'library(land4health); l4h_install();l4h_use_python()'
-  
-      - name: Point reticulate to r-land4health venv
+        run: Rscript -e 'library(land4health); l4h_install(); l4h_use_python()'
+
+      # --- Point reticulate por SO (rutas del venv) ---
+
+      # macOS y Linux (misma ruta)
+      - name: Point reticulate to r-land4health venv (Unix)
+        if: runner.os != 'Windows'
         run: |
           echo "RETICULATE_PYTHON=$HOME/.virtualenvs/r-land4health/bin/python" >> "$GITHUB_ENV"
-      # Todo en una sola sesión R: crear/usar el entorno con l4h_* y ejecutar tu script
+
+      # Windows
+      - name: Point reticulate to r-land4health venv (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $venvRoot = Join-Path $env:USERPROFILE ".virtualenvs"
+          $venvDir  = Join-Path $venvRoot "r-land4health"
+          $scripts  = Join-Path $venvDir "Scripts"
+          $py       = Join-Path $scripts "python.exe"
+          Add-Content -Path $env:GITHUB_ENV -Value "RETICULATE_PYTHON=$py"
+
+      # Ejecutar tu script
       - name: Run processing script
         run: Rscript main.R
-    
+
       - name: Successful
-        run: echo "✅ Workflow successful"
+        run: echo "✅ Workflow successful on ${{ matrix.os }}"
