@@ -36,23 +36,22 @@ jobs:
         run: |
           Rscript -e 'install.packages("pak", repos="https://cloud.r-project.org")'
           Rscript -e 'pak::pak(c("harmonize-tools/land4health", "ambarja/geoidep"))'
-
-      - name: Write EE Service Account JSON (portable)
-        shell: bash
+  
+      - name: Write EE Service Account JSON
+        env:
+          GEE_SA_KEY_B64: ${{ secrets.GEE_SA_KEY_B64 }}
+          GEE_PROJECT_ID: ${{ secrets.GEE_PROJECT_ID }}
         run: |
-          python - <<'PY'
-          import os, base64, sys
-          b64 = os.environ.get("GEE_SA_KEY_B64", "")
-          if not b64:
-            sys.exit("GEE_SA_KEY_B64 vacío")
-          path = os.path.join(os.environ["RUNNER_TEMP"], "ee-key.json")
-          with open(path, "wb") as f:
-            f.write(base64.b64decode(b64))
-          print(f"Wrote", path)
-          PY
+          echo "$GEE_SA_KEY_B64" | base64 -d > "$RUNNER_TEMP/ee-key.json"
           echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/ee-key.json" >> "$GITHUB_ENV"
-          echo "GEE_PROJECT_ID=${GEE_PROJECT_ID}" >> "$GITHUB_ENV"
-
+          echo "GEE_PROJECT_ID=$GEE_PROJECT_ID" >> "$GITHUB_ENV"
+  
+      - name: land4health install
+        run: Rscript -e 'library(land4health); l4h_install();l4h_use_python()'
+  
+      - name: Point reticulate to r-land4health venv
+        run: |
+          echo "RETICULATE_PYTHON=$HOME/.virtualenvs/r-land4health/bin/python" >> "$GITHUB_ENV"
       # Todo en una sola sesión R: crear/usar el entorno con l4h_* y ejecutar tu script
       - name: Create env with l4h_install + run main.R
         run: |
