@@ -43,9 +43,6 @@ jobs:
             libcurl4-openssl-dev libssl-dev libfontconfig1-dev \
             libxml2-dev
 
-      # Deps nativas para sf/terra en macOS (opcional, útil si compilas sf/terra)
-      - name: System deps (macOS)
-      
       - name: Setup Python (for base64 & ensure availability on Windows)
         uses: actions/setup-python@v5
         with:
