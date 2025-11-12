@@ -70,8 +70,7 @@ jobs:
           print("Key written to:", key_path)
           PY
 
-
-      # WINDOWS — usa PowerShell nativo (sin Python heredoc)
+      # Windows – PowerShell nativo (sin heredoc)
       - name: Write EE key (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
@@ -80,8 +79,8 @@ jobs:
           if (-not $b64) { throw "GEE_SA_KEY_B64 vacío" }
           $keyPath = Join-Path $env:RUNNER_TEMP "ee-key.json"
           [IO.File]::WriteAllBytes($keyPath, [Convert]::FromBase64String($b64))
-          Add-Content -Path $env:GITHUB_ENV -Value "GOOGLE_APPLICATION_CREDENTIALS=$keyPath"
-          Add-Content -Path $env:GITHUB_ENV -Value "GEE_PROJECT_ID=$($env:GEE_PROJECT_ID)"
+          "GOOGLE_APPLICATION_CREDENTIALS=$keyPath" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "GEE_PROJECT_ID=$($env:GEE_PROJECT_ID)"   | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
           Write-Host "Key written to: $keyPath"
 
       # --- Set RETICULATE_PYTHON por SO ---
