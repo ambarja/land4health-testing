@@ -53,12 +53,8 @@ jobs:
         run: |
           echo "RETICULATE_PYTHON=$HOME/.virtualenvs/r-land4health/bin/python" >> "$GITHUB_ENV"
       # Todo en una sola sesión R: crear/usar el entorno con l4h_* y ejecutar tu script
-      - name: Create env with l4h_install + run main.R
-        run: |
-          Rscript - <<'R'
-          # Ejecuta tu pipeline
-          source("main.R")
-          R
-
+      - name: Run processing script
+        run: Rscript main.R
+    
       - name: Successful
         run: echo "✅ Workflow successful"
