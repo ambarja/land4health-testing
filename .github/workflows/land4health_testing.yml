@@ -12,7 +12,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
 
     env:
@@ -33,7 +33,7 @@ jobs:
       - name: Setup pandoc
         uses: r-lib/actions/setup-pandoc@v2
 
-      # Dependencias de sistema solo en Linux (útil para sf/terra)
+      # Deps nativas para sf/terra en Linux
       - name: System deps (Linux)
         if: runner.os == 'Linux'
         run: |
@@ -43,17 +43,29 @@ jobs:
             libcurl4-openssl-dev libssl-dev libfontconfig1-dev \
             libxml2-dev
 
+      # Deps nativas para sf/terra en macOS (opcional, útil si compilas sf/terra)
+      - name: System deps (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew update
+          brew install gdal proj geos udunits || true
+
+      - name: Setup Python (for base64 & ensure availability on Windows)
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
       - name: Install R packages with pak
         run: |
           Rscript -e 'install.packages("pak", repos="https://cloud.r-project.org")'
           Rscript -e 'pak::pak(c("harmonize-tools/land4health","ambarja/geoidep","rgee"))'
 
-      # Escribir ee-key.json de forma portable (Linux/Windows)
+      # Escribir ee-key.json de forma portable (igual en Linux/macOS/Windows)
       - name: Write EE Service Account JSON + export env
         run: |
-          python - <<PY
+          python - <<'PY'
           import os, base64, sys
-          b64 = os.environ.get("GEE_SA_KEY_B64","")
+          b64 = os.environ.get("GEE_SA_KEY_B64", "")
           if not b64:
               sys.exit("GEE_SA_KEY_B64 vacío")
           key_path = os.path.join(os.environ["RUNNER_TEMP"], "ee-key.json")
@@ -65,16 +77,16 @@ jobs:
           print("Key written to:", key_path)
           PY
 
-      # Todo en una sola sesión R: crear/usar el entorno Python y correr main.R
+      # Crear/usar entorno Python con l4h_* y ejecutar tu script en una MISMA sesión R
       - name: land4health install + run main.R
         run: |
           Rscript - <<'R'
           library(land4health)
-          # crea (o reutiliza) el entorno Python con earthengine-api
+          # Crea (o reutiliza) el entorno Python con earthengine-api
           l4h_install()
-          # selecciona ese entorno para reticulate/rgee
+          # Selecciona ese entorno para reticulate/rgee
           l4h_use_python()
-          # ejecuta tu pipeline (usa los env ya exportados)
+          # Ejecuta tu pipeline (usa GOOGLE_APPLICATION_CREDENTIALS y GEE_PROJECT_ID)
           source("main.R")
           R
 
