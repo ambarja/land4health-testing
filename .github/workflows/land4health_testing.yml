@@ -45,11 +45,7 @@ jobs:
 
       # Deps nativas para sf/terra en macOS (opcional, útil si compilas sf/terra)
       - name: System deps (macOS)
-        if: runner.os == 'macOS'
-        run: |
-          brew update
-          brew install gdal proj geos udunits || true
-
+      
       - name: Setup Python (for base64 & ensure availability on Windows)
         uses: actions/setup-python@v5
         with:
@@ -58,7 +54,7 @@ jobs:
       - name: Install R packages with pak
         run: |
           Rscript -e 'install.packages("pak", repos="https://cloud.r-project.org")'
-          Rscript -e 'pak::pak(c("harmonize-tools/land4health","ambarja/geoidep","rgee"))'
+          Rscript -e 'pak::pak(c("harmonize-tools/land4health","ambarja/geoidep"))'
 
       # Escribir ee-key.json de forma portable (igual en Linux/macOS/Windows)
       - name: Write EE Service Account JSON + export env
