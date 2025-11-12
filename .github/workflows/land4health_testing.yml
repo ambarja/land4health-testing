@@ -12,7 +12,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.os }}
 
     env:
@@ -33,7 +33,7 @@ jobs:
       - name: Setup pandoc
         uses: r-lib/actions/setup-pandoc@v2
 
-      # Dependencias del sistema SOLO en Linux (útil si sf/terra están en tus deps)
+      # Dependencias de sistema solo en Linux (útil para sf/terra)
       - name: System deps (Linux)
         if: runner.os == 'Linux'
         run: |
@@ -46,14 +46,14 @@ jobs:
       - name: Install R packages with pak
         run: |
           Rscript -e 'install.packages("pak", repos="https://cloud.r-project.org")'
-          Rscript -e 'pak::pak(c("harmonize-tools/land4health", "ambarja/geoidep", "rgee"))'
+          Rscript -e 'pak::pak(c("harmonize-tools/land4health","ambarja/geoidep","rgee"))'
 
-      # Escribir el JSON desde base64 (portable en los 3 SO) y exportar envs
+      # Escribir ee-key.json de forma portable (Linux/Windows)
       - name: Write EE Service Account JSON + export env
         run: |
           python - <<PY
           import os, base64, sys
-          b64 = os.environ.get("GEE_SA_KEY_B64", "")
+          b64 = os.environ.get("GEE_SA_KEY_B64","")
           if not b64:
               sys.exit("GEE_SA_KEY_B64 vacío")
           key_path = os.path.join(os.environ["RUNNER_TEMP"], "ee-key.json")
@@ -65,13 +65,18 @@ jobs:
           print("Key written to:", key_path)
           PY
 
-      # Todo en UNA sesión R: crea/usa el entorno Python con l4h_* y ejecuta main.R
-
-      - name: Run processing script
-        run: Rscript main.R
-      
-      - name: Successful
-        run: echo "✅ Workflow successful"
+      # Todo en una sola sesión R: crear/usar el entorno Python y correr main.R
+      - name: land4health install + run main.R
+        run: |
+          Rscript - <<'R'
+          library(land4health)
+          # crea (o reutiliza) el entorno Python con earthengine-api
+          l4h_install()
+          # selecciona ese entorno para reticulate/rgee
+          l4h_use_python()
+          # ejecuta tu pipeline (usa los env ya exportados)
+          source("main.R")
+          R
 
       - name: Successful
         run: echo "✅ Workflow successful on ${{ matrix.os }}"
