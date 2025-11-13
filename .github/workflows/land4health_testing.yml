@@ -49,11 +49,6 @@ jobs:
           l4h_install()
           # selecciona ese venv para reticulate/rgee (dentro de ESTA sesión)
           l4h_use_python()
-          # (opcional) exporta RETICULATE_PYTHON para pasos posteriores
-          py <- reticulate::py_executable()
-          cat(sprintf("RETICULATE_PYTHON=%s\n", py),
-              file = Sys.getenv("GITHUB_ENV"), append = TRUE)
-          message("RETICULATE_PYTHON = ", py)
           # ahora corre tu script ya con el Python correcto activo
           source("main.R")
           R
