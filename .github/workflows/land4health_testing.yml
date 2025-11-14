@@ -26,11 +26,7 @@ jobs:
           r-version: '4.4.2'
           use-public-rspm: true
 
-      # 🔹 Asegura que haya un python3 disponible y “limpio”
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
+
 
       - name: Install R packages with pak
         run: |
@@ -50,17 +46,8 @@ jobs:
         run: |
           Rscript - <<'R'
           library(land4health)
-
-          # 1) Crear (o recrear) el entorno con virtualenv en vez de 'auto/uv'
-          l4h_install(
-            method = "virtualenv",
-            force  = TRUE
-          )
-
-          # 2) Usar el mismo entorno desde reticulate/rgee
-          l4h_use_python()  # asumiendo que esta función ya existe en el paquete
-
-          # 3) Ejecutar tu script principal
+          l4h_install()
+          l4h_use_python() 
           source("main.R")
           R
 
