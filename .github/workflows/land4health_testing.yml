@@ -50,7 +50,7 @@ jobs:
           Rscript - <<'R'
           library(land4health)
           # crea o reutiliza el venv con earthengine-api
-          l4h_install()
+          l4h_install();l4h_use_python()
           R
       - name: Point reticulate to rgee venv
         run: |
