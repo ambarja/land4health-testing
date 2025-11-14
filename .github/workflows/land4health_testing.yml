@@ -26,8 +26,6 @@ jobs:
           r-version: '4.4.2'
           use-public-rspm: true
 
-
-
       - name: Install R packages with pak
         run: |
           Rscript -e 'install.packages("pak", repos="https://cloud.r-project.org")'
@@ -48,8 +46,14 @@ jobs:
           library(land4health)
           l4h_install()
           l4h_use_python() 
-          source("main.R")
           R
 
+      - name: Point reticulate to land4health
+        run: |
+          echo "RETICULATE_PYTHON=$HOME/.virtualenvs/r-land4health/bin/python" >> "$GITHUB_ENV"
+
+      - name : Run rscript
+        run: Rscript main.R
+  
       - name: Successful
         run: echo "✅ Workflow successful"
