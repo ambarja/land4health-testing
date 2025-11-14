@@ -26,17 +26,17 @@ jobs:
           r-version: '4.4.2'
           use-public-rspm: true
 
-      # Si usas sf/terra en macOS, descomenta:
-      # - name: System deps (macOS)
-      #   run: |
-      #     brew update
-      #     brew install gdal proj geos udunits
+      # 🔹 Asegura que haya un python3 disponible y “limpio”
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
 
       - name: Install R packages with pak
         run: |
           Rscript -e 'install.packages("pak", repos="https://cloud.r-project.org")'
           Rscript -e 'pak::pak(c("harmonize-tools/land4health", "ambarja/geoidep"))'
-  
+
       - name: Write EE Service Account JSON
         env:
           GEE_SA_KEY_B64: ${{ secrets.GEE_SA_KEY_B64 }}
@@ -45,16 +45,24 @@ jobs:
           echo "$GEE_SA_KEY_B64" | base64 -d > "$RUNNER_TEMP/ee-key.json"
           echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/ee-key.json" >> "$GITHUB_ENV"
           echo "GEE_PROJECT_ID=$GEE_PROJECT_ID" >> "$GITHUB_ENV"
-  
-      - name: land4health install
-        run: Rscript -e 'library(land4health); l4h_install(force = TRUE);l4h_use_python()'
-  
-      - name: Point reticulate to r-land4health venv
+
+      - name: land4health install + run main.R
         run: |
-          echo "RETICULATE_PYTHON=$HOME/.virtualenvs/r-land4health/bin/python" >> "$GITHUB_ENV"
-      # Todo en una sola sesión R: crear/usar el entorno con l4h_* y ejecutar tu script
-      - name: Run processing script
-        run: Rscript main.R
-    
+          Rscript - <<'R'
+          library(land4health)
+
+          # 1) Crear (o recrear) el entorno con virtualenv en vez de 'auto/uv'
+          l4h_install(
+            method = "virtualenv",
+            force  = TRUE
+          )
+
+          # 2) Usar el mismo entorno desde reticulate/rgee
+          l4h_use_python()  # asumiendo que esta función ya existe en el paquete
+
+          # 3) Ejecutar tu script principal
+          source("main.R")
+          R
+
       - name: Successful
         run: echo "✅ Workflow successful"
