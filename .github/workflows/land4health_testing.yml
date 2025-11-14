@@ -48,7 +48,7 @@ jobs:
     
     - name: Install land4health
       run: |
-        Rscript -e "l4h_install(force = TRUE, method = 'virtualenv')"
+        Rscript -e "library(land4health); l4h_install(force = TRUE, method = 'virtualenv')"
 
     - name: Point reticulate to rgee venv
       run: |
