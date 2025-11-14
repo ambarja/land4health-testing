@@ -50,7 +50,7 @@ jobs:
       env:
         RETICULATE_PYTHON: /usr/bin/python3
       run: |
-        Rscript -e "library(land4health); l4h_install(method = 'virtualenv')"
+        Rscript -e "library(land4health); l4h_install(method = 'conda')"
     
     - name: Point reticulate to rgee venv
       run: |
