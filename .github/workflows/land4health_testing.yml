@@ -34,7 +34,7 @@ jobs:
       - name: Install R packages with pak
         run: |
           Rscript -e 'install.packages("pak", repos="https://cloud.r-project.org")'
-          Rscript -e 'pak::pak(c("harmonize-tools/land4health", "ambarja/geoidep"));land4health::l4h_install();land4health::l4h_use_python()'
+          Rscript -e 'pak::pak(c("harmonize-tools/land4health", "ambarja/geoidep"));land4health::l4h_install(method = 'virtualenv');land4health::l4h_use_python()'
   
       - name: Write EE Service Account JSON
         env:
