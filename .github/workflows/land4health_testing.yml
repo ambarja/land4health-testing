@@ -26,15 +26,16 @@ jobs:
           r-version: '4.4.2'
           use-public-rspm: true
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
-          
+      # Si usas sf/terra en macOS, descomenta:
+      # - name: System deps (macOS)
+      #   run: |
+      #     brew update
+      #     brew install gdal proj geos udunits
+
       - name: Install R packages with pak
         run: |
           Rscript -e 'install.packages("pak", repos="https://cloud.r-project.org")'
-          Rscript -e 'pak::pak(c("harmonize-tools/land4health", "ambarja/geoidep"));land4health::l4h_install(method = 'virtualenv');land4health::l4h_use_python()'
+          Rscript -e 'pak::pak(c("harmonize-tools/land4health", "ambarja/geoidep"))'
   
       - name: Write EE Service Account JSON
         env:
@@ -45,12 +46,15 @@ jobs:
           echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/ee-key.json" >> "$GITHUB_ENV"
           echo "GEE_PROJECT_ID=$GEE_PROJECT_ID" >> "$GITHUB_ENV"
   
-      - name: Point reticulate to rgee venv
+      - name: land4health install
+        run: Rscript -e 'library(land4health); l4h_install();l4h_use_python()'
+  
+      - name: Point reticulate to r-land4health venv
         run: |
           echo "RETICULATE_PYTHON=$HOME/.virtualenvs/r-land4health/bin/python" >> "$GITHUB_ENV"
-      
+      # Todo en una sola sesión R: crear/usar el entorno con l4h_* y ejecutar tu script
       - name: Run processing script
         run: Rscript main.R
-        
+    
       - name: Successful
         run: echo "✅ Workflow successful"
