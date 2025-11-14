@@ -47,7 +47,7 @@ jobs:
           echo "GEE_PROJECT_ID=$GEE_PROJECT_ID" >> "$GITHUB_ENV"
   
       - name: land4health install
-        run: Rscript -e 'library(land4health); l4h_install();l4h_use_python()'
+        run: Rscript -e 'library(land4health); l4h_install(force = TRUE);l4h_use_python()'
   
       - name: Point reticulate to r-land4health venv
         run: |
