@@ -47,12 +47,14 @@ jobs:
         echo "GEE_PROJECT_ID=$GEE_PROJECT_ID" >> "$GITHUB_ENV"
     
     - name: Install land4health
+      env:
+        RETICULATE_PYTHON: /usr/bin/python3
       run: |
-        Rscript -e "library(land4health); l4h_install(force = TRUE, method = 'virtualenv')"
-
+        Rscript -e "library(land4health); l4h_install(method = 'virtualenv')"
+    
     - name: Point reticulate to rgee venv
       run: |
-        echo "RETICULATE_PYTHON=$HOME/.virtualenvs/r-land4health/bin/python" >> "$GITHUB_ENV"
+          echo "RETICULATE_PYTHON=$HOME/.virtualenvs/r-land4health/bin/python" >> "$GITHUB_ENV"
         
     - name: Run processing script
       run: Rscript main.R
