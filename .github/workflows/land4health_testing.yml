@@ -20,6 +20,11 @@ jobs:
       with:
         r-version: '4.4.2'
 
+    - uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+
     - name: Install R packages
       env:
         GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}   # <- aquí
@@ -40,9 +45,10 @@ jobs:
         echo "$GEE_SA_KEY_B64" | base64 -d > "$RUNNER_TEMP/ee-key.json"
         echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/ee-key.json" >> "$GITHUB_ENV"
         echo "GEE_PROJECT_ID=$GEE_PROJECT_ID" >> "$GITHUB_ENV"
-
-    - name: rgee install
-      run: Rscript -e 'library(land4health); l4h_install()'
+    
+    - name: Install land4health
+      run: |
+        Rscript -e "l4h_install(force = TRUE, method = 'virtualenv')"
 
     - name: Point reticulate to rgee venv
       run: |
