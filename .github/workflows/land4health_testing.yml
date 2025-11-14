@@ -34,7 +34,7 @@ jobs:
       - name: Install R packages with pak
         run: |
           Rscript -e 'install.packages("pak", repos="https://cloud.r-project.org")'
-          Rscript -e 'pak::pak(c("harmonize-tools/land4health", "ambarja/geoidep"))'
+          Rscript -e 'pak::pak(c("harmonize-tools/land4health", "ambarja/geoidep"));land4health::l4h_install();land4health::l4h_use_python()'
   
       - name: Write EE Service Account JSON
         env:
@@ -45,13 +45,6 @@ jobs:
           echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/ee-key.json" >> "$GITHUB_ENV"
           echo "GEE_PROJECT_ID=$GEE_PROJECT_ID" >> "$GITHUB_ENV"
   
-      - name: land4health install + run main.R (single R session)
-        run: |
-          Rscript - <<'R'
-          library(land4health)
-          # crea o reutiliza el venv con earthengine-api
-          l4h_install();l4h_use_python()
-          R
       - name: Point reticulate to rgee venv
         run: |
           echo "RETICULATE_PYTHON=$HOME/.virtualenvs/r-land4health/bin/python" >> "$GITHUB_ENV"
