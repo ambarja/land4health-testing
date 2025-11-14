@@ -1,63 +1,52 @@
-name: Harmonize > Geodroneapp 🗺️ 𖥂🎮 
-
-on:
-  push:
-    branches: [main]
-  workflow_dispatch:
-  schedule:
-    - cron: '0 12 * * *'  # corre diariamente a las 12:00 UTC = 07:00 Perú
-
-jobs:
-  build-and-deploy:
-    runs-on: macos-latest
-
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Setup R
-      uses: r-lib/actions/setup-r@v2
-      with:
-        r-version: '4.4.2'
-
-    - uses: actions/setup-python@v4
-      with:
-        python-version: '3.11'
-
-
-    - name: Install R packages
-      env:
-        GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}   # <- aquí
-      run: |
-        Rscript -e '
-          install.packages(c(
-            "pak"
-          ));
-          pak::pkg_install("ambarja/geoidep");
-          pak::pkg_install("harmonize-tools/land4health")
-        '
-
-    - name: Write EE Service Account JSON
-      env:
-        GEE_SA_KEY_B64: ${{ secrets.GEE_SA_KEY_B64 }}
-        GEE_PROJECT_ID: ${{ secrets.GEE_PROJECT_ID }}
-      run: |
-        echo "$GEE_SA_KEY_B64" | base64 -d > "$RUNNER_TEMP/ee-key.json"
-        echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/ee-key.json" >> "$GITHUB_ENV"
-        echo "GEE_PROJECT_ID=$GEE_PROJECT_ID" >> "$GITHUB_ENV"
+- name: Setup R
+  uses: r-lib/actions/setup-r@v2
+  with:
+    r-version: '4.4.2'
     
-    - name: Install land4health
-      env:
-        RETICULATE_PYTHON: /usr/bin/python3
-      run: |
-        Rscript -e "library(land4health); l4h_install(method = 'conda')"
+- name: Setup Python
+  uses: actions/setup-python@v4
+  with:
+    python-version: '3.11'
     
-    - name: Point reticulate to rgee venv
-      run: |
-          echo "RETICULATE_PYTHON=$HOME/.virtualenvs/r-land4health/bin/python" >> "$GITHUB_ENV"
-        
-    - name: Run processing script
-      run: Rscript main.R
+- name: Install R packages
+  env:
+    GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+  run: |
+    Rscript -e '
+      install.packages(c(
+        "pak"
+      ));
+      pak::pkg_install("ambarja/geoidep");
+      pak::pkg_install("harmonize-tools/land4health")
+    '
+    
+- name: Write EE Service Account JSON
+  env:
+    GEE_SA_KEY_B64: ${{ secrets.GEE_SA_KEY_B64 }}
+    GEE_PROJECT_ID: ${{ secrets.GEE_PROJECT_ID }}
+  run: |
+    echo "$GEE_SA_KEY_B64" | base64 -d > "$RUNNER_TEMP/ee-key.json"
+    echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/ee-key.json" >> "$GITHUB_ENV"
+    echo "GEE_PROJECT_ID=$GEE_PROJECT_ID" >> "$GITHUB_ENV"
+    
+- name: Install Python venv
+  run: |
+    python -m venv "$HOME/.virtualenvs/r-land4health"
+    source "$HOME/.virtualenvs/r-land4health/bin/activate"
+    pip install --upgrade pip setuptools wheel
+    
+- name: Install land4health
+  env:
+    RETICULATE_PYTHON: ${{ runner.home }}/.virtualenvs/r-land4health/bin/python
+  run: |
+    Rscript -e "library(land4health); l4h_install(method = 'virtualenv', force = TRUE)"
+    
+- name: Set Python environment for main script
+  run: |
+    echo "RETICULATE_PYTHON=$HOME/.virtualenvs/r-land4health/bin/python" >> "$GITHUB_ENV"
+    
+- name: Run processing script
+  run: Rscript main.R
   
-    - name: Successful
-      run: echo "✅ Workflow  successful"
+- name: Successful
+  run: echo "✅ Workflow successful"
