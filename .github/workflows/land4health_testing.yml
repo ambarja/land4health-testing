@@ -43,6 +43,7 @@ jobs:
       run: |
         Rscript -e 'install.packages(c("pak", "remotes"))'
         Rscript -e 'pak::pkg_install("harmonize-tools/land4health")'
+        Rscript -e 'pak::pkg_install("ambarja/geoidep")'
 
     - name: Write EE Service Account JSON
       env:
