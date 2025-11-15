@@ -87,39 +87,13 @@ bloque_md <- paste(
 # 6. Reemplazar (siempre un único bloque) en README.md -----------------------
 
 readme_path <- "README.md"
-
 if (!file.exists(readme_path)) {
-  # Si no existe README, creamos uno base
   writeLines(c(
     "# land4health-testing",
     "",
-    "Repo de prueba para el pipeline de `land4health`.",
-    ""
+    "Pipeline de prueba para `land4health`.",
+    "",
+    "<!-- START_AUTOGEN_RESULTS -->",
+    "<!-- END_AUTOGEN_RESULTS -->"
   ), readme_path)
 }
-
-readme <- readLines(readme_path, warn = FALSE)
-
-# 6.1. Eliminar TODOS los bloques anteriores entre START y END --------------
-start_idxs <- grep("<!-- START_AUTOGEN_RESULTS -->", readme, fixed = TRUE)
-end_idxs   <- grep("<!-- END_AUTOGEN_RESULTS -->",   readme, fixed = TRUE)
-
-if (length(start_idxs) > 0 && length(end_idxs) > 0) {
-  first_start <- start_idxs[1]
-  last_end    <- end_idxs[length(end_idxs)]
-
-  keep_before <- if (first_start > 1) readme[1:(first_start - 1)] else character(0)
-  keep_after  <- if (last_end < length(readme)) readme[(last_end + 1):length(readme)] else character(0)
-
-  readme <- c(keep_before, keep_after)
-}
-
-# 6.2. Construir el README nuevo agregando el bloque al final ----------------
-
-nuevo_readme <- c(
-  readme,
-  "",
-  bloque_md
-)
-
-writeLines(nuevo_readme, readme_path)
