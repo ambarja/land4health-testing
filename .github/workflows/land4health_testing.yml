@@ -19,16 +19,31 @@ jobs:
       uses: r-lib/actions/setup-r@v2
       with:
         r-version: '4.4.2'
+        use-public-rspm: true
+
+    # 1) Instalar Python en el runner
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    # 2) Crear virtualenv para land4health / rgee y definir RETICULATE_PYTHON
+    - name: Create virtualenv for land4health / rgee
+      run: |
+        mkdir -p "$HOME/.virtualenvs"
+        python -m venv "$HOME/.virtualenvs/r-land4health"
+        source "$HOME/.virtualenvs/r-land4health/bin/activate"
+        python -m pip install --upgrade pip
+        python -m pip install earthengine-api numpy pandas
+        echo "RETICULATE_PYTHON=$HOME/.virtualenvs/r-land4health/bin/python" >> "$GITHUB_ENV"
 
     - name: Install R packages
       env:
-        GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}   # <- aquí
+        GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        Rscript -e '
-          install.packages(c(
-            "pak", "remotes"
-          )); pak::pkg_install("harmonize-tools/land4health")
-        '
+        Rscript -e 'install.packages(c("pak", "remotes"))'
+        Rscript -e 'pak::pkg_install("harmonize-tools/land4health")'
+
     - name: Write EE Service Account JSON
       env:
         GEE_SA_KEY_B64: ${{ secrets.GEE_SA_KEY_B64 }}
@@ -38,15 +53,12 @@ jobs:
         echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/ee-key.json" >> "$GITHUB_ENV"
         echo "GEE_PROJECT_ID=$GEE_PROJECT_ID" >> "$GITHUB_ENV"
 
-    - name: rgee install
-      run: Rscript -e "library('land4health');l4h_install(force = TRUE, restart = FALSE)"
+    # Aquí RETICULATE_PYTHON ya está definido gracias al paso del virtualenv
+    - name: rgee install via land4health
+      run: Rscript -e "library('land4health'); l4h_install(force = TRUE, restart = FALSE)"
 
-    - name: Point reticulate to rgee venv
-      run: |
-        echo "RETICULATE_PYTHON=$HOME/.virtualenvs/r-land4health/bin/python" >> "$GITHUB_ENV"
-        
     - name: Run processing script
       run: Rscript main.R
           
     - name: Successful
-      run: echo "✅ Workflow  successful"
+      run: echo "✅ Workflow successful"
