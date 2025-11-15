@@ -44,7 +44,7 @@ jobs:
       env:
         GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        Rscript -e 'install.packages(c("pak", "remotes"))'
+        Rscript -e 'install.packages(c("pak", "remotes","ggplot2"))'
         Rscript -e 'pak::pkg_install("harmonize-tools/land4health")'
         Rscript -e 'pak::pkg_install("ambarja/geoidep")'
 
