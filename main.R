@@ -20,8 +20,9 @@ py_run_string(paste(
 ))
 
 # 2. Cálculo
-provinces_loreto <- get_districts(show_progress = FALSE) |>
-  subset(nombdep == "LORETO")
+provinces_loreto <- get_districts(show_progress = FALSE) 
+names(provinces_loreto) 
+#subset(nombdep == "LORETO")
 
 result <- provinces_loreto |>
   l4h_forest_loss(from = "2005-01-01", to = "2020-01-01", sf = TRUE)
