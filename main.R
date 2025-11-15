@@ -20,8 +20,9 @@ py_run_string(paste(
 ))
 
 # 2. Cálculo
-provinces_loreto <- get_districts(show_progress = FALSE) 
-names(provinces_loreto) 
+provinces_loreto <- get_districts(show_progress = FALSE) |>
+ subset(ccdd == '16') 
+#names(provinces_loreto) 
 #subset(nombdep == "LORETO")
 
 result <- provinces_loreto |>
