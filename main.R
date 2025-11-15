@@ -84,44 +84,42 @@ bloque_md <- paste(
   sep = "\n"
 )
 
-## 6. Reemplazar (o crear) el bloque en README.md ----------------------------
+# 6. Reemplazar (siempre un único bloque) en README.md -----------------------
 
 readme_path <- "README.md"
 
-# Si no existe README, crear uno mínimo con los marcadores
 if (!file.exists(readme_path)) {
+  # Si no existe README, creamos uno base
   writeLines(c(
     "# land4health-testing",
     "",
-    "Pipeline de prueba para `land4health`.",
-    "",
-    "<!-- START_AUTOGEN_RESULTS -->",
-    "<!-- END_AUTOGEN_RESULTS -->"
+    "Repo de prueba para el pipeline de `land4health`.",
+    ""
   ), readme_path)
 }
 
 readme <- readLines(readme_path, warn = FALSE)
 
-start <- grep("<!-- START_AUTOGEN_RESULTS -->", readme, fixed = TRUE)
-end   <- grep("<!-- END_AUTOGEN_RESULTS -->", readme, fixed = TRUE)
+# 6.1. Eliminar TODOS los bloques anteriores entre START y END --------------
+start_idxs <- grep("<!-- START_AUTOGEN_RESULTS -->", readme, fixed = TRUE)
+end_idxs   <- grep("<!-- END_AUTOGEN_RESULTS -->",   readme, fixed = TRUE)
 
-# Si las marcas no están bien (faltan, o hay más de una, o están mal ordenadas),
-# añadimos un bloque nuevo al final y usamos esas marcas.
-if (length(start) != 1 || length(end) != 1 || start >= end) {
-  readme <- c(
-    readme,
-    "",
-    "<!-- START_AUTOGEN_RESULTS -->",
-    "<!-- END_AUTOGEN_RESULTS -->"
-  )
-  start <- length(readme) - 1
-  end   <- length(readme)
+if (length(start_idxs) > 0 && length(end_idxs) > 0) {
+  first_start <- start_idxs[1]
+  last_end    <- end_idxs[length(end_idxs)]
+
+  keep_before <- if (first_start > 1) readme[1:(first_start - 1)] else character(0)
+  keep_after  <- if (last_end < length(readme)) readme[(last_end + 1):length(readme)] else character(0)
+
+  readme <- c(keep_before, keep_after)
 }
 
+# 6.2. Construir el README nuevo agregando el bloque al final ----------------
+
 nuevo_readme <- c(
-  readme[1:(start - 1)],
-  bloque_md,
-  readme[(end + 1):length(readme)]
+  readme,
+  "",
+  bloque_md
 )
 
 writeLines(nuevo_readme, readme_path)
