@@ -20,7 +20,7 @@ py_run_string(paste(
 ))
 
 # 2. Cálculo
-provinces_loreto <- get_provinces(show_progress = FALSE) |>
+provinces_loreto <- get_districts(show_progress = FALSE) |>
   subset(nombdep == "LORETO")
 
 result <- provinces_loreto |>
