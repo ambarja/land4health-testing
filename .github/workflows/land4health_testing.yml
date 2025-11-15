@@ -27,7 +27,7 @@ jobs:
         Rscript -e '
           install.packages(c(
             "pak", "remotes"
-          )); pak::pkg_install("harmonize-tools/land4health");remotes::install_github('ambarja/geoidep')
+          )); pak::pkg_install("harmonize-tools/land4health")
         '
     - name: Write EE Service Account JSON
       env:
